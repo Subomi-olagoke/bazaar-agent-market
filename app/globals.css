@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Bazaar — Vellum (Tempo Monochrome), ported from Edge.
+ * Warm-white paper, ink type, Geist Mono metadata. Radius 0. No shadows.
+ * EB Garamond does headlines and the briefing "manuscript"; gain/loss color
+ * is diegetic data-ink, on numbers only (USDC in engraved green).
+ */
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-size: 16px;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #0a0a09;
+  color: #fafaf8;
+}
+
+/* Keyboard focus — deliberate ink outline, square to match radius 0. */
+:focus-visible {
+  outline: 2px solid #0a0a09;
+  outline-offset: 2px;
+}
+
+/* Geist Mono metadata voice — uppercase, tracked, tertiary ink. */
+.label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #72706a;
+}
+
+/* Tabular figures for prices / USDC / PTS. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* The 8×8 ink square — the brand particle (also the reputation meter unit). */
+.ink-square {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #0a0a09;
+}
+
+/* The scribe's cursor — loading states blink like a waiting pen. */
+.ink-cursor {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  background: #0a0a09;
+  vertical-align: baseline;
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The briefing rendered as manuscript — EB Garamond at reading size. */
+.manuscript {
+  font-family: var(--font-garamond), 'EB Garamond', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.65;
+  color: #0a0a09;
+}
+.manuscript p {
+  margin: 0 0 0.85em;
+}
+.manuscript p:last-child {
+  margin-bottom: 0;
+}
+.manuscript strong {
+  font-weight: 600;
+}
+.manuscript em {
+  font-style: italic;
+}
+.manuscript h1,
+.manuscript h2,
+.manuscript h3 {
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  font-size: 21px;
+  margin: 1.1em 0 0.45em;
+  color: #0a0a09;
+}
+.manuscript ul,
+.manuscript ol {
+  margin: 0 0 0.85em;
+  padding-left: 1.3em;
+}
+.manuscript li {
+  margin-bottom: 0.3em;
+}
+
+/* Scroll-in entrance. */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-enter {
+  animation: enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.enter-1 { animation-delay: 0.06s; }
+.enter-2 { animation-delay: 0.12s; }
+.enter-3 { animation-delay: 0.18s; }
+.enter-4 { animation-delay: 0.24s; }
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #dcdbd7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/*
+ * React Flow (@xyflow/react) chrome overrides — strip its default web3-ish
+ * look so the money-flow canvas reads as Vellum: paper ground, hairline edges,
+ * square nodes, no gradients, no shadows, no dotted background.
+ */
+.react-flow {
+  background: #fafaf8;
+}
+.react-flow__background {
+  background: #fafaf8;
+}
+.react-flow__node {
+  border-radius: 0;
+  box-shadow: none;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+}
+.react-flow__edge-path {
+  stroke: #dcdbd7;
+  stroke-width: 1;
+}
+.react-flow__handle {
+  border-radius: 0;
+  border: none;
+  background: #c4c3bf;
+  width: 6px;
+  height: 6px;
+  min-width: 0;
+  min-height: 0;
+}
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__controls,
+.react-flow__controls-button {
+  border-radius: 0;
+  box-shadow: none;
+  border-color: #dcdbd7;
+  background: #ffffff;
+}
+.react-flow__panel {
+  box-shadow: none;
+}
