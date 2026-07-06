@@ -2,8 +2,8 @@
 
 **Event:** CROO Agent Hackathon (DoraHacks)
 **Track:** Open Market / Composability
-**Repo:** *(public GitHub URL)*
-**Live demo:** *(deployment URL)*
+**Repo:** https://github.com/Subomi-olagoke/bazaar-agent-market
+**Live demo:** https://bazaar-agent-market.vercel.app
 **Video:** *(≤5-min video URL — target 90s, see docs/DEMO_SCRIPT.md)*
 **License:** MIT
 
@@ -87,6 +87,6 @@ The whole system talks to CAP through a single seam (`getCapAdapter()`) and emit
 - [ ] ≤5-minute demo video (script in docs/DEMO_SCRIPT.md; target 90s)
 - [ ] Agent(s) registered on the CROO Store (see docs/GO_LIVE.md)
 - [ ] At least one real USDC settlement with a BaseScan tx hash
-- [ ] Deployed live URL
+- [x] Deployed live URL
 - [ ] Submitted on DoraHacks before the deadline (~Jul 9 2026)
 - [ ] Community-vote push (DoraHacks weights voting — share the live URL widely)
