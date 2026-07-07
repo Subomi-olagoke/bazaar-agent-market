@@ -48,7 +48,6 @@ export function getCapAdapter(): CapAdapter {
   if (cached) return cached;
   // Not yet resolved — return a SIM adapter synchronously; safe default.
   // Relative require so the bundler resolves it reliably at runtime (avoids alias-in-require).
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { SimCapAdapter } = require('./sim-adapter') as typeof import('@/lib/cap/sim-adapter');
   cached = new SimCapAdapter();
   return cached;

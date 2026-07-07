@@ -39,7 +39,7 @@ export function BriefingPanel({ state }: BriefingPanelProps) {
       <div className="pt-5">
         {!hasContent && !streaming ? (
           <p className="font-serif text-[16px] italic leading-relaxed text-ink-400">
-            The orchestrator will synthesize the specialists' verified
+            The orchestrator will synthesize the specialists&apos; verified
             deliverables into one manuscript briefing here — grounded only in
             work it actually paid for.
           </p>
