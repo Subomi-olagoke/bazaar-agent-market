@@ -85,13 +85,40 @@ Notes:
 
 ---
 
-## Step 5 — (Optional) Run your own specialists as live providers
+## Step 5 — Run a provider worker (REQUIRED for a real settlement)
 
-External-team agents are hired but run by their owners. **Your own** specialists need a provider worker listening so they can accept orders and deliver. Bazaar defines these in `lib/agents/specialists.ts` + `lib/agents/provider-brain.ts`.
+This is the step that's easy to miss and the one that actually produces your on-chain
+proof. Bazaar's Next.js app only ever plays **requester** — it calls `negotiateOrder`
+and `payOrder`, but it can never call `acceptNegotiation` or `deliverOrder`; those are
+**provider-only** verbs on a *different* agent identity. Hiring **external** agents
+works with zero extra setup (their owners already run this loop for you). But hiring
+**your own** specialist needs *something* on the other end accepting the negotiation
+and delivering — otherwise the hire will simply hang for the SLA window and quietly
+degrade to a simulated completion (safe, but not a real tx).
 
-- For the demo, the simplest path is to hire **external** agents (Step 1–4) — they're already running, so you don't need to host anything.
-- If you want your own specialists to complete real orders, run a lightweight provider listener for each (using its specialist SDK-Key) so it accepts `negotiateOrder`, does the work via the provider brain, and submits delivery. Consult docs/CAP_NOTES.md for the provider method surface.
-- Either way, LIVE degrades a hire to a simulated completion if a provider doesn't respond in time — the run still finishes.
+That "something" is `scripts/run-provider-worker.ts`, already wired to
+`lib/agents/provider-worker.ts`. Run it in its **own terminal**, using a **second**
+registered agent's SDK-Key (not the orchestrator's — a provider agent):
+
+```bash
+PROVIDER_SDK_KEY=croo_sk_your_provider_agent_key \
+PROVIDER_AGENT_ID=agent_market_data \
+npm run provider-worker
+```
+
+- `PROVIDER_SDK_KEY` — the SDK-Key of the agent you registered to list the
+  `CROO_OWN_SERVICE_IDS[0]` service (must be a *different* agent than `CROO_SDK_KEY`).
+- `PROVIDER_AGENT_ID` — which entry in `lib/agents/specialists.ts` it should embody
+  (just picks the deliverable brain/system prompt); defaults to `agent_market_data`.
+
+Leave this running, then trigger a run from the web app that hires the matching
+`CROO_OWN_SERVICE_IDS[0]` serviceId. Watch its terminal — it logs `accepted
+negotiation ... -> order ...` and `delivered order ...` as the real order clears.
+
+For the simplest guaranteed real settlement: register exactly **2 agents** (one
+orchestrator/requester, one provider), seed the provider's serviceId as the *first*
+entry in `CROO_OWN_SERVICE_IDS`, and run the provider worker pointed at it. You don't
+need external agents online at all to get one real, capturable tx hash.
 
 ---
 
@@ -126,7 +153,7 @@ Restart. The badge reads `SIMULATION`, the same choreography runs deterministica
 | Symptom | Cause | Fix |
 |---|---|---|
 | Badge stuck on `SIMULATION` | `BAZAAR_FORCE_SIM=true`, missing key, or SDK didn't import | Set `BAZAAR_FORCE_SIM=false`, confirm `CROO_SDK_KEY`, check `/api/health` |
-| Hire hangs then completes anyway | Provider didn't respond in the SLA window | Expected — LIVE degrades that hire to a simulated completion |
+| Hire hangs then completes anyway | No provider worker running for that serviceId (Step 5), or it didn't respond in the SLA window | Start `npm run provider-worker` pointed at that serviceId's agent; otherwise expected — LIVE degrades that hire to a simulated completion |
 | Payment fails | Orchestrator wallet underfunded | Deposit more test USDC (Step 3) |
 | Discovery only finds your own agents | `CROO_EXTERNAL_SERVICE_IDS` empty or invalid | Add valid external serviceIds from the store |
 | `next build` fails referencing the SDK | Should never happen — SDK is lazy-imported | Confirm you haven't top-level-imported `@croo-network/sdk` anywhere |

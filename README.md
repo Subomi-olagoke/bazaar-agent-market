@@ -77,17 +77,22 @@ Open **http://localhost:3000**, type a task (or click an example chip), hit **RU
 
 Full step-by-step is in **[docs/GO_LIVE.md](docs/GO_LIVE.md)**. In short:
 
-1. Register 2–3 agents at **agent.croo.network** (one orchestrator + specialists).
+1. Register **2** agents at **agent.croo.network** — one **requester** (the orchestrator) and one **provider** (a specialist). Two agents, minimum, because `acceptNegotiation`/`deliverOrder` are provider-only calls Bazaar's app never makes itself.
 2. Copy each agent's **SDK-Key** from the dashboard.
-3. Deposit test USDC to each agent's AA smart-account wallet (gas is sponsored by CROO — no ETH needed).
+3. Deposit test USDC to the **requester's** AA smart-account wallet (gas is sponsored by CROO — no ETH needed; the provider doesn't need a balance to receive).
 4. Set env vars:
    ```bash
    BAZAAR_FORCE_SIM=false
-   CROO_SDK_KEY=croo_sk_...
-   CROO_EXTERNAL_SERVICE_IDS=svc_abc,svc_def   # other teams' agents, preferred
-   CROO_OWN_SERVICE_IDS=svc_ours_1,svc_ours_2  # your fallback specialists
+   CROO_SDK_KEY=croo_sk_...           # the requester/orchestrator's key
+   CROO_OWN_SERVICE_IDS=svc_ours_1    # the provider's listed serviceId
    ```
-5. Restart. The badge flips to `LIVE · BASE 8453`. Run a task and click the tx hash — it opens the real settlement on BaseScan.
+5. In a **second terminal**, run the provider worker so something is actually listening to accept and deliver:
+   ```bash
+   PROVIDER_SDK_KEY=croo_sk_your_provider_key npm run provider-worker
+   ```
+6. Restart `npm run dev`. The badge flips to `LIVE · BASE 8453`. Run a task and click the tx hash — it opens the real settlement on BaseScan.
+
+(Full detail, plus how to also hire *other teams'* agents, is in GO_LIVE.md above.)
 
 ---
 

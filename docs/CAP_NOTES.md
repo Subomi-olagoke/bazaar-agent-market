@@ -38,19 +38,24 @@ Agents are registered and funded at **agent.croo.network**. Each agent gets a DI
 
 ## The order lifecycle (what Bazaar drives)
 
-The requester (Bazaar's orchestrator) runs this loop per hire. Mapping to Bazaar's `JobPhase` in the right column:
+**Verified directly against the installed package** (`node_modules/@croo-network/sdk/dist/*.d.ts`, v0.2.1) — not guessed from docs, since getting this wrong is exactly what silently broke LIVE mode the first time around. Two facts that are easy to get wrong and matter a lot:
 
-| CAP step | SDK surface (indicative) | Bazaar phase |
-|---|---|---|
-| Negotiate a price/terms for a serviceId | `negotiateOrder({ serviceId, requirements })` | `negotiating` |
-| Order created on-chain | wire event `order_created` / `OrderCreated` | `accepted` |
-| Fund escrow (lock USDC) | `payOrder(orderId)` → `Order.payTxHash` | `funded` |
-| Provider does the work | (provider-side) | `delivering` |
-| Delivery submitted + verified | wire event `order_completed`; `getDelivery(orderId)`; deliverable hash | `verified` |
-| Escrow released / settled | wire event; `Order.clearTxHash` | `settled` |
+1. **`negotiateOrder()` returns a `Negotiation`, which has NO `orderId` field.** The real order doesn't exist yet — it's created only once the provider accepts. The requester must wait for it (via WS `order_created` and/or polling `listOrders`/`getNegotiation`), keyed by `negotiationId`, not `orderId`.
+2. **`acceptNegotiation()` is a PROVIDER-only verb.** The requester (Bazaar's orchestrator) never calls it. Whoever owns the *other* agent — another team, or our own `lib/agents/provider-worker.ts` process using a second registered agent's key — must call it. Same for `deliverOrder()`.
 
-- **Escrow model:** funds are locked at **paid** and released at **completed** — the classic "no proof, no payment" gate. Bazaar writes the verified deliverable's keccak256 hash before settlement.
-- **`requirements`** are passed as a JSON string, e.g. `JSON.stringify({ subtask })`.
+The requester (Bazaar's orchestrator, `lib/cap/live-adapter.ts`) runs this loop per hire:
+
+| CAP step | Who calls it | SDK surface | Bazaar phase |
+|---|---|---|---|
+| Negotiate a price/terms for a serviceId | requester | `negotiateOrder({ serviceId, requirements })` → `{ negotiationId }` | `negotiating` |
+| Accept the negotiation → order created on-chain | **provider** (not us) | `acceptNegotiation(negotiationId)`; we learn the `orderId` via wire event `order_created` or by polling | `accepted` |
+| Fund escrow (lock USDC) | requester | `payOrder(orderId)` → `PayOrderResult.txHash` | `funded` |
+| Do the work, submit delivery | **provider** (not us) | `deliverOrder(orderId, { deliverableType, deliverableText })` | `delivering` |
+| Delivery verified, escrow released | — (system) | wire event `order_completed`; `getDelivery(orderId)` → `Delivery.deliverableText` / `Delivery.contentHash` | `verified` → `settled` |
+
+- **Escrow model:** funds are locked at **paid** and released at **completed** — the classic "no proof, no payment" gate. Bazaar reads the deliverable's real `contentHash` (falls back to a computed keccak only if the field is absent).
+- **`requirements`** are passed as a JSON string, e.g. `JSON.stringify({ subtask })` — the provider worker parses it back out via `getNegotiation(order.negotiationId).requirements` to recover the original subtask.
+- **Resilience:** `live-adapter.ts` races the WS event stream against polling (`getNegotiation`/`listOrders`/`getOrder` every 2.5s) for both waits, since a single WS connection is too fragile to trust exclusively during a live demo.
 
 ## Wire events → `JobEvent` (mapping in `lib/cap/event-map.ts`)
 
@@ -65,13 +70,15 @@ CROO emits wire event strings over the WS stream. Bazaar's `event-map.ts` is a *
 
 Any unrecognized envelope also passes through as `{ type: 'raw', raw }` so the feed can surface it.
 
-## `Order` fields Bazaar reads
+## `Order` / `Delivery` fields Bazaar reads
 
-- `orderId` — CAP order id.
-- `payTxHash` — the escrow-lock transaction (→ `Job.payTxHash`, BaseScan link).
-- `deliverTxHash` — delivery/verification transaction.
-- `clearTxHash` — the settlement/release transaction (→ `Settlement.clearTxHash`, the feed's clickable proof).
-- deliverable payload (via `getDelivery`) — becomes `Job.deliverableText`; its keccak256 becomes `Job.deliverableHash`.
+`Order` (real fields only — no `deliverableHash` or `settleTxHash`, those were earlier guesses and have been removed from `event-map.ts`):
+- `orderId`, `negotiationId`, `chainOrderId` — CAP identifiers.
+- `createTxHash` / `payTxHash` / `deliverTxHash` / `clearTxHash` — the tx hashes at each stage; `clearTxHash` is the settlement/release tx (→ `Settlement.clearTxHash`, the feed's clickable proof).
+
+`Delivery` (via `getDelivery(orderId)`):
+- `deliverableText` — becomes `Job.deliverableText`.
+- `contentHash` — the real on-chain deliverable hash, becomes `Job.deliverableHash` (only falls back to a locally-computed keccak if absent).
 
 ## Reputation
 
@@ -82,7 +89,7 @@ Each cleared order writes a reputation (Merit / PTS) update to the provider's DI
 ## What CAP does NOT provide (and how Bazaar handles it)
 
 - **No live store-search / discovery API** in `0.2.0`. Bazaar's `discover()` reads a curated registry (`lib/registry.ts`) seeded from `CROO_EXTERNAL_SERVICE_IDS` + `CROO_OWN_SERVICE_IDS` + hardcoded defaults, external-first. When CAP ships discovery, only `discover()` / the registry change — the `JobEvent` contract is unaffected.
-- **Providers must be running to fulfill LIVE orders.** External-team agents are already live (their owners host them). Bazaar's *own* specialists need a provider worker listening (`lib/agents/specialists.ts` + `provider-brain.ts`) to accept and deliver. If a provider doesn't respond, the LIVE adapter degrades that single hire to a simulated completion so the run never dies.
+- **Providers must be running to fulfill LIVE orders.** External-team agents are already live (their owners host them). Bazaar's *own* specialists need `scripts/run-provider-worker.ts` (→ `lib/agents/provider-worker.ts`) running as a separate long-lived process, authenticated as a *second* registered agent, to accept negotiations and deliver — see docs/GO_LIVE.md Step 5. If no provider responds, the LIVE adapter degrades that single hire to a simulated completion so the run never dies.
 
 ## Escrow / settlement in SIM
 

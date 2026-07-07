@@ -22,7 +22,12 @@ export type CrooWireEventType =
   | 'order_expired'
   | string; // tolerate unknown strings
 
-/** A minimal shape of a CROO Order as the SDK surfaces it (subset we consume). */
+/**
+ * A minimal shape of a real CROO `Order` (subset we consume). Field names verified
+ * against @croo-network/sdk 0.2.1 (node_modules/@croo-network/sdk/dist/types.d.ts) —
+ * there is no `settleTxHash` or `deliverableHash` on Order; the deliverable hash lives
+ * on `Delivery.contentHash` instead.
+ */
 export interface CrooOrderLike {
   orderId?: string;
   id?: string;
@@ -33,8 +38,6 @@ export interface CrooOrderLike {
   payTxHash?: string;
   deliverTxHash?: string;
   clearTxHash?: string;
-  settleTxHash?: string;
-  deliverableHash?: string;
   deliverable?: unknown;
   [k: string]: unknown;
 }
@@ -107,8 +110,8 @@ export function extractNegotiationId(e: CrooWireEvent): string | undefined {
 }
 
 /**
- * Extract the on-chain proof fields carried by an Order/wire event into a partial Job
- * patch. Only defined fields are returned so we never clobber earlier values.
+ * Extract the on-chain proof fields carried by a real `Order` into a partial Job patch.
+ * Only defined fields are returned so we never clobber earlier values.
  */
 export function extractProof(order: CrooOrderLike | undefined): {
   chainOrderId?: string;
@@ -116,7 +119,6 @@ export function extractProof(order: CrooOrderLike | undefined): {
   payTxHash?: string;
   deliverTxHash?: string;
   clearTxHash?: string;
-  deliverableHash?: string;
 } {
   if (!order) return {};
   const out: Record<string, string> = {};
@@ -124,20 +126,20 @@ export function extractProof(order: CrooOrderLike | undefined): {
   if (order.createTxHash) out.createTxHash = order.createTxHash;
   if (order.payTxHash) out.payTxHash = order.payTxHash;
   if (order.deliverTxHash) out.deliverTxHash = order.deliverTxHash;
-  // CROO exposes the settlement/release tx under either clearTxHash or settleTxHash.
   if (order.clearTxHash) out.clearTxHash = order.clearTxHash;
-  else if (order.settleTxHash) out.clearTxHash = order.settleTxHash;
-  if (order.deliverableHash) out.deliverableHash = order.deliverableHash;
   return out;
 }
 
-/** Pull deliverable text out of an Order/delivery payload, best-effort. */
+/**
+ * Pull deliverable text out of a `Delivery` payload — real field is `deliverableText` —
+ * or, best-effort, out of any other payload shape we might be handed.
+ */
 export function extractDeliverableText(payload: unknown): string | undefined {
   if (payload == null) return undefined;
   if (typeof payload === 'string') return payload;
   if (typeof payload === 'object') {
     const o = payload as Record<string, unknown>;
-    for (const k of ['text', 'deliverable', 'content', 'result', 'output', 'data']) {
+    for (const k of ['deliverableText', 'text', 'deliverable', 'content', 'result', 'output', 'data']) {
       const v = o[k];
       if (typeof v === 'string' && v.trim()) return v;
     }
