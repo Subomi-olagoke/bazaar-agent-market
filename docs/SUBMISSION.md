@@ -85,7 +85,7 @@ The whole system talks to CAP through a single seam (`getCapAdapter()`) and emit
 - [x] Uses CROO CAP (order lifecycle, escrow, delivery verification, reputation) in LIVE mode
 - [x] Dual-mode with graceful fallback (demo never dead-ends)
 - [ ] ≤5-minute demo video (script in docs/DEMO_SCRIPT.md; target 90s)
-- [ ] Agent(s) registered on the CROO Store (see docs/GO_LIVE.md)
+- [x] Agent(s) registered on the CROO Store (see docs/GO_LIVE.md)
 - [ ] At least one real USDC settlement with a BaseScan tx hash
 - [x] Deployed live URL
 - [ ] Submitted on DoraHacks before the deadline (~Jul 9 2026)
