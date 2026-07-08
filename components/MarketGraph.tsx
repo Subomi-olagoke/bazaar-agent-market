@@ -8,10 +8,11 @@
 // no controls chrome — the Vellum overrides in globals.css strip React Flow's
 // default look; here we just disable interactivity we don't want.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
   type Edge,
   type Node,
   type NodeTypes,
@@ -30,7 +31,12 @@ const ORCH_X = 60;
 const ORCH_Y = 300;
 const ARC_X = 520;
 const ARC_TOP = 40;
-const ROW_H = 150;
+// Specialist cards render ~180px tall (header + body + footer) — 150px row
+// spacing had adjacent cards overlapping even with the x-fan offset. 210px
+// clears the card height with margin; the wider 100px fan gives extra
+// separation for adjacent same-side cards.
+const ROW_H = 210;
+const FAN_X = 100;
 
 interface MarketGraphProps {
   state: MarketState;
@@ -75,7 +81,7 @@ function buildGraph(
   specialists.forEach((agent, i) => {
     const y = startY + i * ROW_H;
     // Slight horizontal fan so edges don't overlap: alternate a small x offset.
-    const x = ARC_X + (i % 2 === 0 ? 0 : 60);
+    const x = ARC_X + (i % 2 === 0 ? 0 : FAN_X);
     nodes.push(agentNode(agent, x, y, {}, deliveringBy, settledPulses, serviceByAgent));
   });
 
@@ -122,6 +128,29 @@ function agentNode(
   };
 }
 
+/**
+ * `fitView` as a static prop only fits ONCE, on initial mount. Agents are
+ * discovered progressively (orchestrator first, specialists trickle in), so a
+ * one-shot fit locks the viewport to whatever tiny node-set existed at first
+ * paint — every node added afterward lands at its correct coordinates but
+ * ends up overlapping (view too zoomed in) or clipped outside the visible
+ * area (view too far off) since the transform never updates again. This
+ * component re-fits imperatively every time the node count changes.
+ */
+function FitViewOnNodesChange({ nodeCount }: { nodeCount: number }) {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    if (nodeCount === 0) return;
+    // Let the new node mount/measure first, then fit — a same-tick fitView
+    // can run before React Flow has measured the just-added node's size.
+    const id = requestAnimationFrame(() => {
+      fitView({ padding: 0.18, minZoom: 0.5, maxZoom: 1.1, duration: 400 });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [nodeCount, fitView]);
+  return null;
+}
+
 export function MarketGraph({ state, settledPulses }: MarketGraphProps) {
   const { nodes, edges } = useMemo(
     () => buildGraph(state, settledPulses),
@@ -135,8 +164,6 @@ export function MarketGraph({ state, settledPulses }: MarketGraphProps) {
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.18, minZoom: 0.5, maxZoom: 1.1 }}
         minZoom={0.4}
         maxZoom={1.4}
         proOptions={{ hideAttribution: true }}
@@ -147,7 +174,9 @@ export function MarketGraph({ state, settledPulses }: MarketGraphProps) {
         zoomOnDoubleClick={false}
         preventScrolling={false}
         className="h-full w-full"
-      />
+      >
+        <FitViewOnNodesChange nodeCount={nodes.length} />
+      </ReactFlow>
     </ReactFlowProvider>
   );
 }

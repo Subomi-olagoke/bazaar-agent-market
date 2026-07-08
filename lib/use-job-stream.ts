@@ -22,12 +22,30 @@ import type {
   Settlement,
 } from '@/lib/types';
 
+// Mirrors lib/orchestrator/orchestrator.ts's ORCHESTRATOR constant — duplicated
+// here (not imported) because that module pulls in server-only adapter code
+// that has no business in the client bundle. The orchestrator is never sent
+// over the wire via an `agent.discovered` event (that event only fires for
+// discovered specialists), so without this the client's `state.agents` would
+// never contain it — MarketGraph's `source: orchestrator.id` edges would then
+// point at a node that doesn't exist, and React Flow silently drops any edge
+// whose endpoint isn't a real node. Seeding it here is what makes edges (and
+// the orchestrator node itself) render at all.
+const CLIENT_ORCHESTRATOR: Agent = {
+  id: 'orch',
+  name: 'Bazaar Orchestrator',
+  role: 'orchestrator',
+  origin: 'own',
+  reputation: 0,
+  avatarSeed: 'orch',
+};
+
 const IDLE_STATE: MarketState = {
   runId: null,
   mode: 'sim',
   task: null,
   status: 'idle',
-  agents: {},
+  agents: { [CLIENT_ORCHESTRATOR.id]: CLIENT_ORCHESTRATOR },
   services: {},
   jobs: {},
   settlements: [],
